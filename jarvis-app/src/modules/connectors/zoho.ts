@@ -1,33 +1,27 @@
+import { query } from "../../lib/db";
 import type { Connector, ContextObjectInput } from "./types";
 
 /**
- * Zoho Books connector — REST API, read-only forever (never write to accounting).
+ * Zoho Books connector — read-only forever (never writes to accounting).
+ * Pulls unpaid invoices as context objects AND writes today's row to
+ * financial_snapshots (cash from bank accounts, burn from last-30-day expenses).
  *
- * Wiring steps (Phase 1):
- * 1. Create a Self Client at api-console.zoho.com → note client id/secret.
- * 2. Generate a grant with scope ZohoBooks.fullaccess.READ, exchange for a refresh token.
- * 3. Implement pull():
- *    - GET /books/v3/invoices?status=overdue → kind 'invoice' (one context object each)
- *    - GET /books/v3/reports (P&L, cash)     → write a row to financial_snapshots
- *    Use invoice_id as externalId; compose url from the Zoho web app link.
+ * One-time setup:
+ * 1. api-console.zoho.com → Self Client → note client id/secret.
+ * 2. Generate a grant code with scope: ZohoBooks.fullaccess.READ
+ * 3. Exchange it once for a refresh token → env.
+ * 4. Set ZOHO_DC to your data center TLD: com | in | eu | com.au | jp
  */
 
-export const zohoConnector: Connector = {
-  name: "zoho",
+const DC = () => process.env.ZOHO_DC || "com";
+const API = () => `https://www.zohoapis.${DC()}/books/v3`;
 
-  configured() {
-    return Boolean(
-      process.env.ZOHO_CLIENT_ID &&
-        process.env.ZOHO_CLIENT_SECRET &&
-        process.env.ZOHO_REFRESH_TOKEN &&
-        process.env.ZOHO_ORGANIZATION_ID
-    );
-  },
-
-  async pull(): Promise<ContextObjectInput[]> {
-    // TODO(Phase 1): refresh token → access token; fetch overdue invoices and
-    // daily financials; also INSERT INTO financial_snapshots.
-    console.warn("[zoho] connector configured but pull() not yet implemented");
-    return [];
-  },
-};
+async function getAccessToken(): Promise<string> {
+  const params = new URLSearchParams({
+    refresh_token: process.env.ZOHO_REFRESH_TOKEN!,
+    client_id: process.env.ZOHO_CLIENT_ID!,
+    client_secret: process.env.ZOHO_CLIENT_SECRET!,
+    grant_type: "refresh_token",
+  });
+  const res = await fetch(`https://accounts.zoho.${DC()}/oauth/v2/token?${params}`, { method: "POST" });
+  if (!res.ok) throw new Error(`Zoho token refresh failed (${res.status}): ${(await res.t

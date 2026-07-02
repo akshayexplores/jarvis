@@ -1,34 +1,28 @@
 import type { Connector, ContextObjectInput } from "./types";
 
 /**
- * Outlook connector — Microsoft Graph API (mail + calendar in one API).
+ * Outlook connector — Microsoft Graph (mail + calendar), read-only.
  *
- * Wiring steps (Phase 1):
+ * One-time setup:
  * 1. Register an app at entra.microsoft.com → App registrations.
- * 2. Grant delegated scopes: Mail.Read, Calendars.Read, offline_access.
- * 3. Do the OAuth code flow once locally to obtain a refresh token; store it in env.
- * 4. Implement pull():
- *    - GET /me/calendarView?startDateTime=...&endDateTime=...  → kind 'event'
- *    - GET /me/messages?$top=50&$orderby=receivedDateTime desc → kind 'email'
- *    Map each to ContextObjectInput; use the Graph `id` as externalId and
- *    `webLink` as url so Jarvis deep-links back to Outlook.
+ * 2. Delegated scopes: Mail.Read, Calendars.Read, offline_access.
+ * 3. Complete the OAuth code flow once to obtain a refresh token → env.
+ *    (Tenant can be "common" for personal/work accounts.)
  */
 
-export const outlookConnector: Connector = {
-  name: "outlook",
+const GRAPH = "https://graph.microsoft.com/v1.0";
 
-  configured() {
-    return Boolean(
-      process.env.MS_GRAPH_CLIENT_ID &&
-        process.env.MS_GRAPH_CLIENT_SECRET &&
-        process.env.MS_GRAPH_REFRESH_TOKEN
-    );
-  },
-
-  async pull(): Promise<ContextObjectInput[]> {
-    // TODO(Phase 1): exchange refresh token → access token, then fetch
-    // calendarView + messages as described above.
-    console.warn("[outlook] connector configured but pull() not yet implemented");
-    return [];
-  },
-};
+async function getAccessToken(): Promise<string> {
+  const tenant = process.env.MS_GRAPH_TENANT_ID || "common";
+  const res = await fetch(`https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: process.env.MS_GRAPH_CLIENT_ID!,
+      client_secret: process.env.MS_GRAPH_CLIENT_SECRET!,
+      refresh_token: process.env.MS_GRAPH_REFRESH_TOKEN!,
+      grant_type: "refresh_token",
+      scope: "https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/Calendars.Read offline_access",
+    }),
+  });
+  if (!res.ok) throw new Error(`MS Graph token refresh failed (${res.status}): ${(await res.text()).slice(0, 2

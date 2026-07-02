@@ -1,32 +1,25 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { sessionToken, SESSION_COOKIE } from "@/lib/session";
 
 /**
- * Optional single-user protection: set APP_PASSWORD to require HTTP Basic auth
- * on every route (any username). Leave unset for open local development.
- * Real multi-user auth arrives in Phase 4 (productization).
+ * Auth gate. Set APP_PASSWORD to require login on every route.
+ * Leave unset for open local development.
+ *
+ * - /login and /api/login stay public (so you can sign in).
+ * - /api/ingest accepts `Authorization: Bearer $CRON_SECRET` so Vercel Cron
+ *   can trigger scheduled pulls without a browser session.
  */
-export function middleware(req: NextRequest) {
-  const password = process.env.APP_PASSWORD;
-  if (!password) return NextResponse.next();
+export async function middleware(req: NextRequest) {
+  if (!process.env.APP_PASSWORD) return NextResponse.next();
 
-  const header = req.headers.get("authorization") ?? "";
-  if (header.startsWith("Basic ")) {
-    try {
-      const decoded = atob(header.slice(6));
-      const supplied = decoded.slice(decoded.indexOf(":") + 1);
-      if (supplied === password) return NextResponse.next();
-    } catch {
-      /* fall through to 401 */
-    }
+  const { pathname } = req.nextUrl;
+  if (pathname === "/login" || pathname === "/api/login") return NextResponse.next();
+
+  if (pathname === "/api/ingest" && process.env.CRON_SECRET) {
+    const auth = req.headers.get("authorization");
+    if (auth === `Bearer ${process.env.CRON_SECRET}`) return NextResponse.next();
   }
 
-  return new NextResponse("Authentication required", {
-    status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="Jarvis"' },
-  });
-}
-
-export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
-};
+  const cookie = req.cookies.get(SESSION_COOKIE)?.value;
+  if (cookie && cookie === (await sessionToken())

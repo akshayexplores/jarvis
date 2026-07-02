@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { upsertContextObject, runAllConnectors } from "@/modules/connectors";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60; // connector pulls (Coda exports especially) need headroom
 
 /** POST a manual note (Phase 0 exit test) — body: { title, body, kind? } */
 export async function POST(req: Request) {
@@ -33,7 +34,4 @@ export async function GET() {
   try {
     const counts = await runAllConnectors();
     return NextResponse.json({ counts });
-  } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
-  }
-}
+  } catch (err) 

@@ -1,4 +1,5 @@
 -- Demo data so the UI works before any connector is wired.
+SET search_path = jarvis, public, extensions;
 
 INSERT INTO credit_ledger (delta, reason) VALUES (500, 'initial top-up') ON CONFLICT DO NOTHING;
 
@@ -15,5 +16,4 @@ INSERT INTO context_objects (source, external_id, kind, title, body, occurred_at
 ON CONFLICT (source, external_id) DO NOTHING;
 
 INSERT INTO financial_snapshots (as_of, cash, receivables, monthly_burn, runway_months, overdue_invoices) VALUES
-  (CURRENT_DATE, 84500, 12300, 9800, 8.6, '[{"number":"142","client":"Acme Corp","amount":4200,"days_late":15}]')
-ON CONFLICT (as_of) DO NOTHING;
+  (CURRENT_DATE, 84500, 12300, 9800, 8.6, '[{"number":"142","client":"Acme Corp","amount":4200,"days
