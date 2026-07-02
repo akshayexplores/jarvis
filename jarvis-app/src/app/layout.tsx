@@ -17,4 +17,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Link href="/ask">Ask Jarvis</Link>
           <Link href="/finance">Financial Pulse</Link>
           <Link href="/capture">Capture</Link>
-          <Link href="/memory">Me
+          <Link href="/memory">Memory</Link>
+          <Link href="/status">Status</Link>
+          <a href="/api/logout" style={{ marginLeft: "auto", color: "var(--muted)" }}>
+            Logout
+          </a>
+        </nav>
+        <main>{children}</main>
+      </body>
+    </html>
+  );
+}

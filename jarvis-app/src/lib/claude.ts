@@ -31,4 +31,42 @@ async function askOpenRouter(system: string, user: string): Promise<string> {
     body: JSON.stringify({
       model: process.env.AI_MODEL || "anthropic/claude-sonnet-4.5",
       max_tokens: 1500,
-      
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`OpenRouter error ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  }
+  const data = (await res.json()) as {
+    choices: Array<{ message: { content: string | null } }>;
+  };
+  return data.choices[0]?.message.content ?? "";
+}
+
+async function askAnthropic(system: string, user: string): Promise<string> {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": process.env.ANTHROPIC_API_KEY!,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: process.env.AI_MODEL || process.env.ANTHROPIC_MODEL || "claude-sonnet-5",
+      max_tokens: 1500,
+      system,
+      messages: [{ role: "user", content: user }],
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Claude API error ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  }
+  const data = (await res.json()) as { content: Array<{ type: string; text?: string }> };
+  return data.content
+    .filter((b) => b.type === "text")
+    .map((b) => b.text ?? "")
+    .join("");
+}

@@ -47,4 +47,8 @@ export async function runAllConnectors(): Promise<Record<string, number>> {
       continue;
     }
     const items = await c.pull();
-    for (const item of ite
+    for (const item of items) await upsertContextObject(item);
+    counts[c.name] = items.length;
+  }
+  return counts;
+}

@@ -34,4 +34,7 @@ export async function GET() {
   try {
     const counts = await runAllConnectors();
     return NextResponse.json({ counts });
-  } catch (err) 
+  } catch (err) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+  }
+}

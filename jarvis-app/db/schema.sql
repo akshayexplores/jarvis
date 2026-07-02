@@ -50,4 +50,12 @@ CREATE TABLE IF NOT EXISTS credit_ledger (
 );
 
 -- Financial Pulse: one row per day, written by the Zoho connector.
-CREATE T
+CREATE TABLE IF NOT EXISTS financial_snapshots (
+  id            BIGSERIAL PRIMARY KEY,
+  as_of         DATE NOT NULL UNIQUE,
+  cash          NUMERIC NOT NULL,
+  receivables   NUMERIC NOT NULL,
+  monthly_burn  NUMERIC NOT NULL,
+  runway_months NUMERIC NOT NULL,
+  overdue_invoices JSONB NOT NULL DEFAULT '[]'
+);

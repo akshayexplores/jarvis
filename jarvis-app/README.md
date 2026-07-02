@@ -52,4 +52,29 @@ Set `APP_PASSWORD` + `SESSION_SECRET` and every route requires sign-in (login pa
 signed httpOnly session cookie, 30-day expiry, logout in the nav). Unset = open,
 for local development only. Single-user by design — multi-user auth is Phase 4.
 
-## Architecture (modul
+## Architecture (modular monolith)
+
+```
+src/lib/          db, claude (metered via credits), credits, memory, rag
+src/modules/
+  connectors/     one interface, four connectors, one upsert path
+src/app/          Next.js App Router UI + API routes
+db/               schema.sql (Postgres + pgvector-ready), seed.sql
+scripts/pull.ts   scheduled ingestion job
+```
+
+Design rules baked in:
+- **Read-only first** — no connector writes to a source system in Alpha.
+- **Every AI call goes through the Credit System** — hard stop at zero credits.
+- **Sync meaning, not megabytes** — normalized text + metadata + deep links back to the source.
+- **pgvector column reserved** — semantic search is a data migration away, not a rewrite.
+
+## Deploy
+
+Vercel (app) + Supabase/Neon (Postgres):
+
+1. Push this repo to GitHub, import it in Vercel (set root directory to `jarvis-app`).
+2. Add env vars in Vercel: `DATABASE_URL`, `ANTHROPIC_API_KEY`, `APP_PASSWORD`,
+   `SESSION_SECRET`, `CRON_SECRET`, plus any connector credentials.
+3. `vercel.json` already schedules an hourly connector pull via Vercel Cron
+   (it authenticates with `CRON_SECRET`).

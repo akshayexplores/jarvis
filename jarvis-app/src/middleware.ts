@@ -20,4 +20,22 @@ export async function middleware(req: NextRequest) {
   if (pathname === "/login" || pathname === "/api/login") return NextResponse.next();
 
   if (pathname === "/api/ingest" && process.env.CRON_SECRET) {
-    const auth = r
+    const auth = req.headers.get("authorization");
+    if (auth === `Bearer ${process.env.CRON_SECRET}`) return NextResponse.next();
+  }
+
+  const cookie = req.cookies.get(SESSION_COOKIE)?.value;
+  if (cookie && cookie === (await sessionToken())) return NextResponse.next();
+
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  const url = req.nextUrl.clone();
+  url.pathname = "/login";
+  url.search = "";
+  return NextResponse.redirect(url);
+}
+
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+};
